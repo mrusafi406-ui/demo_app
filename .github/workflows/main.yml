@@ -22,23 +22,23 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
-          java-version: '17'
+          java-version: 17
 
       - name: Prepare Web Directory & Setup Capacitor
         run: |
           mkdir -p www
-          cp index.html www/
+          cp *.html www/ 2>/dev/null || true
           npm init -y
-          npm install @capacitor/core @capacitor/cli @capacitor/android
-          npx cap init "Maruf Traders" "com.maruftraders.app" --web-dir www
-          npx cap add android
+          npm install @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6
+          npx cap init "Maruf Traders" "com.maruftraders.app" --web-dir www || true
+          npx cap add android || true
           npx cap sync android
 
       - name: Build Debug APK
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug
+          ./gradlew assembleDebug --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
