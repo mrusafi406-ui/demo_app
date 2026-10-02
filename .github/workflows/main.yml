@@ -1,47 +1,47 @@
-name: Build Android APK
-
+name: Build APK
 on:
-  push:
-    branches: [ main, master ]
   workflow_dispatch:
-
+  push:
+    branches: [main]
+permissions:
+  contents: write
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: 18
-
-      - name: Setup Java JDK
-        uses: actions/setup-java@v4
+          node-version: 20
+      - uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
-          java-version: 17
-
-      - name: Prepare Web Directory & Setup Capacitor
+          distribution: temurin
+          java-version: 21
+      - name: Prepare web files
         run: |
           mkdir -p www
-          cp *.html www/ 2>/dev/null || true
+          cp index.html www/
+      - name: Create Capacitor project
+        run: |
           npm init -y
-          npm install @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6
-          npx cap init "Maruf Traders" "com.maruftraders.app" --web-dir www || true
-          npx cap add android || true
+          npm install @capacitor/core@7 @capacitor/cli@7 @capacitor/android@7
+          npm install thermal-printer-cordova-plugin cordova-plugin-android-permissions
+          npx cap init "Maruf Billing" com.maruf.billing --web-dir www
+          npx cap add android
+      - name: Bluetooth permissions and repositories
+        run: |
+          sed -i 's#</manifest>#    <uses-permission android:name="android.permission.BLUETOOTH" />\n    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />\n    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />\n</manifest>#' android/app/src/main/AndroidManifest.xml
+          sed -i "s#mavenCentral()#mavenCentral()\n        maven { url 'https://jitpack.io' }#" android/build.gradle
           npx cap sync android
-
-      - name: Build Debug APK
+      - name: Build APK
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
+          ./gradlew assembleDebug
+      - name: Publish APK
+        uses: softprops/action-gh-release@v2
         with:
-          name: Maruf-Traders-APK
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          tag_name: build-${{ github.run_number }}
+          name: Build ${{ github.run_number }}
+          files: android/app/build/outputs/apk/debug/app-debug.apk
+          
